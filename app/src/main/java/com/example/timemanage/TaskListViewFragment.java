@@ -25,15 +25,12 @@ public class TaskListViewFragment extends Fragment implements RecyclerView.OnIte
     // UI Variables
     private RecyclerView recyclerView;
     TaskCustomAdapter adapter;
-    private TextView noTasksTextView;
     private GestureDetector gestureDetector;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mainActivity = Objects.requireNonNull((MainActivity) getActivity());
-
-        adapter = new TaskCustomAdapter(mainActivity.tasks, noTasksTextView);
 
         // Initialize Task Card Gesture Detection
         gestureDetector = new GestureDetector(mainActivity, new RecyclerViewGestureListener());
@@ -44,7 +41,10 @@ public class TaskListViewFragment extends Fragment implements RecyclerView.OnIte
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         super.onCreateView(inflater, container, savedInstanceState);
 
+
         View fragmentView = inflater.inflate(R.layout.tasks_layout, container, false);
+        TextView noTasksTextView = fragmentView.findViewById(R.id.no_tasks_textview);
+        adapter = new TaskCustomAdapter(mainActivity.tasks, noTasksTextView);
 
         //UI Variables
         recyclerView = fragmentView.findViewById(R.id.tasksRecyclerView);
@@ -56,7 +56,6 @@ public class TaskListViewFragment extends Fragment implements RecyclerView.OnIte
         recyclerView.addOnItemTouchListener(this);
 
         //No Tasks Message
-        noTasksTextView = fragmentView.findViewById(R.id.no_tasks_textview);
         if (mainActivity.tasks.size() == 0) {
             noTasksTextView.setVisibility(View.VISIBLE);
         } else {
@@ -97,9 +96,10 @@ public class TaskListViewFragment extends Fragment implements RecyclerView.OnIte
 
             // Finish this task
             int position = recyclerView.getChildAdapterPosition(view);
-            adapter.setFinishedTask(position);
+            adapter.toggleFinishedTask(position);
             Log.d("GestureListener",
                     String.format("Finishing task at %d", position));
+            mainActivity.onTaskEdited();
 
             return true;
         }

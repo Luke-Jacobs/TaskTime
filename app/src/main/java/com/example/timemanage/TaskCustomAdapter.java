@@ -1,15 +1,17 @@
 package com.example.timemanage;
 
-import android.app.AlertDialog;
-import android.view.GestureDetector;
+import android.annotation.SuppressLint;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
+import org.threeten.bp.LocalDateTime;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,33 +32,63 @@ public class TaskCustomAdapter extends RecyclerView.Adapter<TaskCustomAdapter.Ta
         return new TaskViewHolder(view);
     }
 
+    @SuppressLint("DefaultLocale")
+    static void inflateTaskHolder(final TaskViewHolder holder, Task item, boolean expandCard) {
+        // Fill text from Task data representation
+        holder.taskNameTextView.setText(item.getName());
+        holder.taskDescriptionTextView.setText(item.getDescription());
+
+        // Fill due date text and color the text according to its urgency
+        LocalDateTime taskDueDate = item.getToCompleteByTime();
+        holder.dueDateTextView.setText(String.format("%s\n%d",
+                taskDueDate.getMonth().toString(), taskDueDate.getDayOfMonth()));
+
+        // If this task is finished
+        if (item.isFinished()) {
+            holder.greenBackground.setVisibility(View.VISIBLE);
+            holder.checkMark.setVisibility(View.VISIBLE);
+        } else {
+            holder.greenBackground.setVisibility(View.GONE);
+            holder.checkMark.setVisibility(View.GONE);
+        }
+
+        // If this is an expanded card view - TODO Make more efficient?
+        if (expandCard) {
+            holder.taskDescriptionTextView.setEllipsize(null);  // Turn off ellipsis
+            holder.taskDescriptionTextView.setMaxLines(Integer.MAX_VALUE);
+        } else {
+            holder.taskDescriptionTextView.setEllipsize(TextUtils.TruncateAt.END);
+            holder.taskDescriptionTextView.setMaxLines(2);
+        }
+    }
+
+    @SuppressLint("DefaultLocale")
     @Override
     public void onBindViewHolder(@NonNull final TaskViewHolder holder, final int position) {
-        TextView taskNameTextView = holder.taskNameTextView;
-        TextView taskDescriptionTextView = holder.taskDescriptionTextView;
-
         Task item = dataset.get(position);
-        if (item != null) {
-            taskNameTextView.setText(dataset.get(position).getName());
-            taskDescriptionTextView.setText(dataset.get(position).getDescription());
-        }
+        assert item != null;
 
-        // If this is an expanded card view
-        if (expandedPosition == position) {
-            taskDescriptionTextView.setEllipsize(null);  // Turn off ellipsis
-            taskDescriptionTextView.setMaxLines(Integer.MAX_VALUE);
-        }
+        boolean shouldExpand = (position == expandedPosition);
+        inflateTaskHolder(holder, item, shouldExpand);
     }
 
     void setExpandedCard(int position) {
+        int previousPosition = expandedPosition;
         expandedPosition = position;
         notifyItemChanged(position);
+        notifyItemChanged(previousPosition);
     }
 
-    void setFinishedTask(int position) {
+    void toggleFinishedTask(int position) {
         Task task = dataset.get(position);
         assert task != null;
-        task.setFinished();
+
+        if (task.isFinished()) {
+            task.setFinished(false);
+        } else {
+            task.setFinished(true);
+        }
+
         notifyItemChanged(position);
     }
 
@@ -96,11 +128,19 @@ public class TaskCustomAdapter extends RecyclerView.Adapter<TaskCustomAdapter.Ta
     static class TaskViewHolder extends RecyclerView.ViewHolder {
         TextView taskNameTextView;
         TextView taskDescriptionTextView;
+        TextView dueDateTextView;
+        ImageView greenBackground;
+        ImageView checkMark;
 
         TaskViewHolder(@NonNull View itemView) {
             super(itemView);
             this.taskNameTextView = itemView.findViewById(R.id.taskNameText);
             this.taskDescriptionTextView = itemView.findViewById(R.id.taskDescriptionText);
+            this.dueDateTextView = itemView.findViewById(R.id.dueDateTextView);
+
+            // Task completed views
+            this.greenBackground = itemView.findViewById(R.id.greenBackground);
+            this.checkMark = itemView.findViewById(R.id.checkMark);
         }
     }
 

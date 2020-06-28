@@ -36,5 +36,5 @@ dependencies {
     implementation 'com.google.android.material:material:1.2.0-alpha06'
     implementation 'com.jakewharton.threetenabp:threetenabp:1.2.4'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
-//    implementation 'com.github.material-components:material-components-android:1.2.0-alpha06'
+    implementation 'com.applandeo:material-calendar-view:1.4.0'
 }

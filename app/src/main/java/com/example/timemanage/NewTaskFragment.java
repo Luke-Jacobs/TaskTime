@@ -12,6 +12,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CalendarView;
 import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.TextView;
@@ -24,26 +25,23 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDialogFragment;
 import androidx.fragment.app.Fragment;
 
-import com.google.android.material.datepicker.MaterialDatePicker;
-
 import org.threeten.bp.LocalDate;
 import org.threeten.bp.LocalDateTime;
 import org.threeten.bp.LocalTime;
 import org.threeten.bp.format.DateTimeFormatter;
 
 import java.util.Calendar;
+import java.util.Date;
 import java.util.Objects;
 
 
-public class NewTaskFragment extends Fragment {
+public class NewTaskFragment extends Fragment implements
+        CalendarView.OnDateChangeListener, TimePicker.OnTimeChangedListener {
 
     //Container Activity
     private MainActivity mainActivity;
     //Views
     private EditText taskNameET, taskDescriptionET;
-    private TextView taskDueDateSelectionTV, taskDueTimeSelectionTV;
-    //Fields to be filled out and sent back to the main activity
-    private String taskNameStr, taskDescriptionStr;
     private LocalDate taskDueDate;
     private LocalTime taskDueTime;
     //Time Constants
@@ -54,6 +52,9 @@ public class NewTaskFragment extends Fragment {
         // Flesh out UI
         super.onCreate(savedInstanceState);
         mainActivity = (MainActivity) Objects.requireNonNull(getActivity());
+
+        taskDueDate = LocalDate.now();
+        taskDueTime = LocalTime.of(23, 59);
 
         Log.d("NewTaskFragment", "Starting new task activity");
     }
@@ -70,8 +71,6 @@ public class NewTaskFragment extends Fragment {
 
         taskNameET = view.findViewById(R.id.taskName);
         taskDescriptionET = view.findViewById(R.id.taskDescription);
-        taskDueDateSelectionTV = view.findViewById(R.id.taskDueDateTextView);
-        taskDueTimeSelectionTV = view.findViewById(R.id.taskDueTimeTextView);
 
         // Set fragment button onClick listener
         view.findViewById(R.id.submitNewTask).setOnClickListener(new View.OnClickListener() {
@@ -81,54 +80,32 @@ public class NewTaskFragment extends Fragment {
             }
         });
 
-        Button openDueDatePickerBtn = view.findViewById(R.id.openDueDatePickerBtn);
-        openDueDatePickerBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // Handle "Select Due Date" button click
-                AppCompatDialogFragment dueDatePickerFragment = new TaskDatePickerFragment();
-                dueDatePickerFragment.setTargetFragment(NewTaskFragment.this, 0);
-                dueDatePickerFragment.show(mainActivity.getSupportFragmentManager(), "dueDatePickerFragment");
-            }
-        });
+        // Set CalendarView time and listener
+        CalendarView calendarView = view.findViewById(R.id.selectDueDateView);
+        calendarView.setDate(System.currentTimeMillis());
+        calendarView.setOnDateChangeListener((CalendarView.OnDateChangeListener) this);
 
-        Button openDueTimePickerBtn = view.findViewById(R.id.openDueTimeButton);
-        openDueTimePickerBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                AppCompatDialogFragment dueTimePickerFragment = new TaskTimePickerFragment();
-                dueTimePickerFragment.setTargetFragment(NewTaskFragment.this, 0);
-                dueTimePickerFragment.show(mainActivity.getSupportFragmentManager(), "dueTimePickerFragment");
-            }
-        });
+        // Set TimeView time and listener
+        TimePicker timePicker = view.findViewById(R.id.selectDueTimeView);
+        timePicker.setCurrentHour(23);  // The default due time is always midnight
+        timePicker.setCurrentMinute(59);
+        timePicker.setOnTimeChangedListener(this);
 
         return view;
-    }
-
-    private void taskDueDateUpdated(LocalDate selectedTimeToReturn) {
-        taskDueDate = selectedTimeToReturn;
-        String updatedDueDateStr = taskDueDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
-        taskDueDateSelectionTV.setText(String.format("Due Date: %s", updatedDueDateStr));
-        taskDueDateSelectionTV.setVisibility(View.VISIBLE);
-    }
-
-    private void taskDueTimeUpdated(LocalTime selectedTimeToReturn) {
-        taskDueTime = selectedTimeToReturn;
-        String updatedDueDateStr = taskDueTime.format(DateTimeFormatter.ofPattern("HH:mm"));
-        taskDueTimeSelectionTV.setText(String.format("Due Time: %s", updatedDueDateStr));
-        taskDueTimeSelectionTV.setVisibility(View.VISIBLE);
     }
 
     // Respond to the user clicking the "Finish Task" button
     // - This builds a Task object if all the necessary required fields are filled in
     private void onSubmitNewTask(View view) {
-        taskNameStr = taskNameET.getText().toString();
-        taskDescriptionStr = taskDescriptionET.getText().toString();
+        //Fields to be filled out and sent back to the main activity
+        String taskNameStr = taskNameET.getText().toString();
+        String taskDescriptionStr = taskDescriptionET.getText().toString();
         if (taskDueTime == null) {
             taskDueTime = BEFORE_MIDNIGHT;
         }
 
         if (taskNameStr.compareTo("") != 0 && taskDescriptionStr.compareTo("") != 0 && taskDueDate != null) {
+            // If all these fields are filled out
             LocalDateTime dt = LocalDateTime.of(taskDueDate, taskDueTime);
             Task t = new Task(taskNameStr, taskDescriptionStr, dt);
             Log.d("Returning Task", t.getStrRepr());
@@ -137,6 +114,7 @@ public class NewTaskFragment extends Fragment {
             Intent returningData = new Intent();
             returningData.putExtra("returnedTask", t);
             mainActivity.onNewTaskFragmentReturned(t);
+
         } else {
             // If the user did not fill out an essential field to create a new task
             String missingItemStr;
@@ -157,76 +135,22 @@ public class NewTaskFragment extends Fragment {
         }
     }
 
-
-    /*
-     *
-     * This fragment is used to be the pop-up the users see when they click on the select due date
-     * button.
-     *
-     * */
-
-    public static class TaskDatePickerFragment extends AppCompatDialogFragment
-            implements DatePickerDialog.OnDateSetListener {
-
-        @RequiresApi(api = Build.VERSION_CODES.O)
-        @Override
-        public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
-            LocalDate selectedDateToReturn = LocalDate.of(year, month, dayOfMonth);
-            Log.d("TaskDatePickerFragment",
-                    String.format("User selected: %s", selectedDateToReturn.toString()));
-            NewTaskFragment hostActivity = (NewTaskFragment) Objects.requireNonNull(getTargetFragment());
-            hostActivity.taskDueDateUpdated(selectedDateToReturn);
-        }
-
-        @NonNull
-        @Override
-        public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
-            super.onCreateDialog(savedInstanceState);
-
-            // The current date will be the starting date
-            final Calendar c = Calendar.getInstance();
-            int year = c.get(Calendar.YEAR);
-            int month = c.get(Calendar.MONTH);
-            int day = c.get(Calendar.DAY_OF_MONTH);
-
-            Log.d("TaskDatePickerFragment", "Starting date picker dialog window");
-
-            return new DatePickerDialog(Objects.requireNonNull(getActivity()),
-                    this, year, month, day);
-        }
+    @Override
+    public void onTimeChanged(TimePicker view, int hourOfDay, int minute) {
+        // When the user selects the due time
+        LocalTime selectedTimeToReturn = LocalTime.of(hourOfDay, minute);
+        Log.d("NewTaskFragment",
+                String.format("User selected: %s", selectedTimeToReturn.toString()));
+        taskDueTime = selectedTimeToReturn;
     }
 
-    /*
-    *
-    * This fragment is like the above, but for selecting the due time.
-    *
-    * */
-
-    public static class TaskTimePickerFragment extends AppCompatDialogFragment
-            implements TimePickerDialog.OnTimeSetListener {
-
-        @NonNull
-        @Override
-        public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
-            super.onCreateDialog(savedInstanceState);
-
-            final Calendar c = Calendar.getInstance();
-            int hour = c.get(Calendar.HOUR_OF_DAY);
-            int minute = c.get(Calendar.MINUTE);
-
-            Log.d("TaskDatePickerFragment", "Starting date picker dialog window");
-
-            return new TimePickerDialog(Objects.requireNonNull(getActivity()),
-                    this, hour, minute, true);
-        }
-
-        @Override
-        public void onTimeSet(TimePicker view, int hourOfDay, int minute) {
-            LocalTime selectedTimeToReturn = LocalTime.of(hourOfDay, minute);
-            Log.d("TaskDatePickerFragment",
-                    String.format("User selected: %s", selectedTimeToReturn.toString()));
-            NewTaskFragment hostActivity = ((NewTaskFragment) Objects.requireNonNull(getTargetFragment()));
-            hostActivity.taskDueTimeUpdated(selectedTimeToReturn);
-        }
+    @Override
+    public void onSelectedDayChange(@NonNull CalendarView view, int year, int month, int dayOfMonth) {
+        // When the user selects the due date
+        LocalDate selectedDateToReturn = LocalDate.of(year, month, dayOfMonth);
+        Log.d("NewTaskFragment",
+                String.format("User selected: %s", selectedDateToReturn.toString()));
+        taskDueDate = selectedDateToReturn;
     }
+
 }

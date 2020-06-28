@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">TimeManage</string>
+    <string name="no_tasks_text">There are no tasks due on this day.</string>
 </resources>

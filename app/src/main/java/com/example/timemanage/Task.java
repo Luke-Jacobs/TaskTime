@@ -40,8 +40,8 @@ class Task implements java.io.Serializable {
         return isFinished;
     }
 
-    void setFinished() {
-        isFinished = true;
+    void setFinished(boolean toggle) {
+        isFinished = toggle;
     }
 
     private String getCompleteByTimeStr() {

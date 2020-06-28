@@ -47,11 +47,11 @@ public class MainActivity extends AppCompatActivity {
         }
         // DEBUG
         tasks = new ArrayList<>();
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 3; i++) {
             tasks.add(new Task("Name", "This is a very lengthy description that " +
                     "should allocate more than a few lines on my tiny phone screen. This will be " +
                     "the real test of my programming skills.",
-                    LocalDateTime.of(2020, 12, 25, 17, 50)));
+                    LocalDateTime.of(2020, 5, 23, 17, 50)));
         }
         // Bottom Navigation Menu Setup
         BottomNavigationView navigationView = findViewById(R.id.bottomNav);
@@ -107,6 +107,11 @@ public class MainActivity extends AppCompatActivity {
     protected void onNewTaskFragmentReturned(Task returnedTask) {
         Log.d("MainActivity", "New task created");
         taskListViewFragment.adapter.addTask(returnedTask);
+        calendarFragment.updateCalendarEventIcons();
+    }
+
+    protected void onTaskEdited() {
+        calendarFragment.updateCalendarEventIcons();
     }
 
     // For initializing the tasks made by users in the past, stored in a file
@@ -129,6 +134,23 @@ public class MainActivity extends AppCompatActivity {
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
             return null;
+        }
+    }
+
+    // For retrieving tasks by a day key
+    protected Task[] getTasksDueOnDay(LocalDateTime day) {
+        ArrayList<Task> tasksOutput = new ArrayList<>();
+
+        for (Task task: tasks) {
+            if (task.getToCompleteByTime().toLocalDate().equals(day.toLocalDate())) {
+                tasksOutput.add(task);
+            }
+        }
+
+        if (tasksOutput.size() > 0) {
+            return tasksOutput.toArray(new Task[0]);
+        } else {
+            return new Task[]{};
         }
     }
 
